@@ -56,3 +56,8 @@ properties:
     enum:
       - 1
       - 2
+
+  power-layer:
+    type: int
+    required: false
+    default: 0

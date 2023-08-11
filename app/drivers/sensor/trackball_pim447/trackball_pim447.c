@@ -150,9 +150,11 @@ static int trackball_pim447_init(const struct device *dev)
 {
     struct trackball_pim447_data *data = dev->data;
 
-    const char *label = DT_LABEL(DT_INST(0, pimoroni_trackball_pim447));
-    data->i2c_dev = device_get_binding(label);
+    // TODO Does not compile
+    //const char *label = DT_LABEL(DT_INST(0, pimoroni_trackball_pim447));
+    //data->i2c_dev = device_get_binding(label);
     //data->i2c_dev = device_get_binding(DT_INST_BUS_LABEL(0));
+    data->i2c_dev = DEVICE_DT_GET(DT_INST_BUS(0));
     if (data->i2c_dev == NULL) {
         LOG_ERR("Failed to get I2C device");
         return -EINVAL;

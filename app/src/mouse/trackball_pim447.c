@@ -9,9 +9,11 @@
 #include <zephyr/drivers/sensor.h>
 //#include <zmk/sensors.h>
 //#include <logging/log.h>
+#include <drivers/ext_power.h>
 #include <zephyr/logging/log.h>
 #include <zmk/hid.h>
 #include <zmk/endpoints.h>
+#include <zmk/events/layer_state_changed.h>
 #include <zmk/trackball_pim447.h>
 
 LOG_MODULE_REGISTER(PIM447, CONFIG_SENSOR_LOG_LEVEL);
@@ -30,6 +32,9 @@ LOG_MODULE_REGISTER(PIM447, CONFIG_SENSOR_LOG_LEVEL);
 
 #define BUTTON    DT_PROP(DT_INST(0, pimoroni_trackball_pim447), button)
 #define SWAP_AXES DT_PROP(DT_INST(0, pimoroni_trackball_pim447), swap_axes)
+
+#define POWER_LAYER  DT_PROP(DT_INST(0, pimoroni_trackball_pim447), power_layer)
+#define GRACE_PERIOD 100
 
 static int mode = DT_PROP(DT_INST(0, pimoroni_trackball_pim447), mode);
 
@@ -192,11 +197,121 @@ static void thread_code(void *p1, void *p2, void *p3)
 static K_THREAD_STACK_DEFINE(thread_stack, STACK_SIZE);
 static struct k_thread thread;
 
+// TODO check if this new part is correct
+static k_tid_t thread_id;              // the ID of the track ball driver thread created by the present module
+static const struct device *ext_power; // device that controls the 3V3 output pin of the Nice!Nano
+
+/*
+ * The function <trackball_layer_changed_callback()> is the callback associated with events of the type
+ * <zmk_layer_state_changed> as defined in ./app/include/zmk/events/layer_state_changed.c.
+ */
+
+static int trackball_layer_changed_callback ( const zmk_event_t *ev ) {
+
+  struct zmk_layer_state_changed *data = as_zmk_layer_state_changed (ev); // obtain the event specific data
+
+  if (POWER_LAYER) { // if POWER_LAYER is 0, output 3V3 is always on and the track ball driver thread always running, then the following is not needed
+    if (data->layer == POWER_LAYER) { // if the state of the layer changes whose activation turns the track ball on and off
+      if (data->state) {
+	LOG_DBG ("Track ball layer %d activated; resuming track ball driver.\n",POWER_LAYER);
+
+	if (ext_power) {
+	  int power = ext_power_get (ext_power);
+	  if (!power) { // power is off but ought to be switched on
+	    int rc = ext_power_enable (ext_power);
+            if (rc)
+	      LOG_ERR ("Unable to enable EXT_POWER: %d",rc);
+
+	    LOG_DBG ("External power ON.\n");
+	  }
+        } else {
+	  LOG_DBG ("External power not controlled by track ball driver.\n");
+	}
+
+	k_sleep (K_MSEC (GRACE_PERIOD));
+	k_thread_resume (thread_id);  // resume the track ball driver thread
+      } else {
+	LOG_DBG ("Track ball layer %d deactivated, suspending track ball driver.\n",POWER_LAYER);
+	k_thread_suspend (thread_id); // suspend the track ball driver thread
+	k_sleep (K_MSEC (GRACE_PERIOD));
+
+	if (ext_power) {
+	  int power = ext_power_get (ext_power);
+	  if (power) { // power is on but ought to be switched off
+	    int rc = ext_power_disable (ext_power);
+            if (rc)
+	      LOG_ERR ("Unable to disable EXT_POWER: %d",rc);
+
+	    LOG_DBG ("External power OFF.\n");
+	  }
+        } else {
+	  LOG_DBG ("External power not controlled by track ball driver.\n");
+	}
+      }
+    }
+  }
+
+  return (ZMK_EV_EVENT_BUBBLE); // bubble this event b/c other listeners may need to see it, too
+}
+
+ZMK_LISTENER (trackball_layer_changed,trackball_layer_changed_callback); // the above function is a listener
+ZMK_SUBSCRIPTION (trackball_layer_changed,zmk_layer_state_changed);      // subscribe to all events of type <zmk_layer_state_changed>
+
+/*
+ * Initialize the track ball driver thread.
+ */
+
 int zmk_trackball_pim447_init()
 {
-    k_thread_create(&thread, thread_stack, STACK_SIZE, thread_code,
-                    NULL, NULL, NULL, K_PRIO_PREEMPT(8), 0, K_NO_WAIT);
-    return 0;
+
+  ext_power = device_get_binding ("EXT_POWER"); // the device that controls 3V3 output of the Nice!Nano
+  if (!ext_power) {
+    LOG_ERR ("Unable to retrieve ext_power device: EXT_POWER");
+  }
+
+  if (ext_power) {
+    if (!POWER_LAYER) { // if POWER_LAYER is 0, then the track ball is always on
+      LOG_DBG ("Track ball always on.");
+
+      if (ext_power) {
+	int power = ext_power_get (ext_power);
+	if (!power) { // power is on but ought to be switched off
+	  int rc = ext_power_enable (ext_power);
+	  if (rc)
+	    LOG_ERR ("Unable to enable EXT_POWER: %d",rc);
+
+	  LOG_DBG ("External power ON.");
+	}
+      } else {
+	LOG_DBG ("External power not controlled by track ball driver.");
+      }
+    }
+  }
+
+  k_sleep (K_MSEC (GRACE_PERIOD));
+  thread_id = k_thread_create (&thread, thread_stack, STACK_SIZE, thread_code, NULL, NULL, NULL, K_PRIO_PREEMPT(8), 0, K_NO_WAIT);
+
+  if (POWER_LAYER) { // if POWER_LAYER is not 0, then power of the track ball depends on a specific layer
+    LOG_DBG ("Track ball depends on layer %d; initially suspending track ball driver.",POWER_LAYER);
+    k_thread_suspend (thread_id); // in this case, we suspend the track ball until the layer is activated
+    k_sleep (K_MSEC (GRACE_PERIOD));
+
+    if (ext_power) {
+      int power = ext_power_get (ext_power);
+      if (power) { // power is on but ought to be switched off
+	int rc = ext_power_disable (ext_power);
+	if (rc)
+	  LOG_ERR ("Unable to disable EXT_POWER: %d",rc);
+
+	LOG_DBG ("External power OFF.");
+      }
+    } else {
+      LOG_DBG ("External power not controlled by track ball driver.");
+    }
+  }
+
+  return 0;
 }
+
 
 SYS_INIT(zmk_trackball_pim447_init, APPLICATION, CONFIG_APPLICATION_INIT_PRIORITY);

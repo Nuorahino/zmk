@@ -49,7 +49,6 @@ static const struct behavior_driver_api behavior_trackball_pim447_driver_api = {
     .binding_released = on_keymap_binding_released,
 };
 
-// TODO fix and uncomment this
 #define PIM447_INST(n)                                                              \
     static const struct config config_##n = {                                       \
         .mode      = DT_INST_PROP(n, mode),                                         \
@@ -59,6 +58,7 @@ static const struct behavior_driver_api behavior_trackball_pim447_driver_api = {
     DEVICE_DT_INST_DEFINE(n, behavior_trackball_pim447_init, NULL, \
                           NULL, &config_##n, APPLICATION,                           \
                           CONFIG_KERNEL_INIT_PRIORITY_DEFAULT, &behavior_trackball_pim447_driver_api);
+// TODO is the pm control_nop needed?
 //    DEVICE_DT_INST_DEFINE(n, behavior_trackball_pim447_init, device_pm_control_nop, \
 //                          NULL, &config_##n, APPLICATION,                           \
 //                          CONFIG_KERNEL_INIT_PRIORITY_DEFAULT, &behavior_trackball_pim447_driver_api);
