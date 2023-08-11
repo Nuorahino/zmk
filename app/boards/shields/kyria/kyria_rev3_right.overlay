@@ -43,8 +43,8 @@
     power-layer = <4>;       // layer whose activity switches on 3V3 output of the N!N or 0 for always on; default: 0
 		invert-scroll-x;        // Invert wheel X axis (left is right, and vice versa)
 		invert-scroll-y;        // Invert wheel Y axis (up is down, and vice versa)
-		mode = <PIM447_MOVE>;   // Act as mouse pointer at startup (PIM447_Scroll for a pointer)
-		//mode = <PIM447_SCROLL>;   // Act as mouse pointer at startup (PIM447_Scroll for a pointer)
+		mode = <PIM447_MOVE>;   // Act as mouse pointer at startup (PIM447_SCROLL for a pointer)
+    poll-interval = <5>;
 	};
 };
 

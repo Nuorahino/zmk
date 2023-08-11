@@ -61,3 +61,8 @@ properties:
     type: int
     required: false
     default: 0
+
+  poll-interval:
+    type: int
+    required: false
+    default: 50

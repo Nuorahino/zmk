@@ -34,6 +34,7 @@ LOG_MODULE_REGISTER(PIM447, CONFIG_SENSOR_LOG_LEVEL);
 #define SWAP_AXES DT_PROP(DT_INST(0, pimoroni_trackball_pim447), swap_axes)
 
 #define POWER_LAYER  DT_PROP(DT_INST(0, pimoroni_trackball_pim447), power_layer)
+#define POLL_INTERVAL  DT_PROP(DT_INST(0, pimoroni_trackball_pim447), poll_interval)
 #define GRACE_PERIOD 100
 
 static int mode = DT_PROP(DT_INST(0, pimoroni_trackball_pim447), mode);
@@ -188,7 +189,8 @@ static void thread_code(void *p1, void *p2, void *p3)
             }
         }
 
-        k_sleep(K_MSEC(10));
+        k_sleep(K_MSEC(POLL_INTERVAL));
+
     }
 }
 
