@@ -33,7 +33,7 @@ ZMK is currently missing some features found in other popular firmware. This tab
 | One Shot Keys                                                                                                                      | ✅  |    ✅     | ✅  |
 | [Combo Keys](features/combos.md)                                                                                                   | ✅  |           | ✅  |
 | [Macros](behaviors/macros.md)                                                                                                      | ✅  |    ✅     | ✅  |
-| Mouse Keys                                                                                                                         | 🚧  |    ✅     | ✅  |
+| Mouse Keys                                                                                                                         | ✅  |    ✅     | ✅  |
 | Low Active Power Usage                                                                                                             | ✅  |           |     |
 | Low Power Sleep States                                                                                                             | ✅  |    ✅     |     |
 | [Low Power Mode (VCC Shutoff)](behaviors/power.md)                                                                                 | ✅  |    ✅     |     |
@@ -44,6 +44,7 @@ ZMK is currently missing some features found in other popular firmware. This tab
 | [Wide Range of ARM Chips Supported](https://docs.zephyrproject.org/latest/boards/index.html)                                       | ✅  |           |     |
 
 [^2]: Tap-Dances are limited to single and double-tap on BlueMicro
+
 [^1]: OLEDs are currently proof of concept in ZMK.
 
 ## Code Of Conduct
